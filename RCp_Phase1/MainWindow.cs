@@ -68,10 +68,12 @@ namespace RCp_Phase1
         {
             try
             {
-                rtbResults.AppendText($"Sending following request:\nGET {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} HTTP/1.1\nHost: {ipAddress}\nConnection: Keep-Alive\nAccept: */*\n");
+                rtbResults.AppendText($"Sending following request:\n{cmbReqMethod.SelectedItem} {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} HTTP/1.1\nHost: {ipAddress}\nConnection: Keep-Alive\nAccept: */*\n");
 
-                byte[] buf = Encoding.ASCII.GetBytes($"GET {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} HTTP/1.1\r\n" +
+                byte[] buf = Encoding.ASCII.GetBytes($"{cmbReqMethod.SelectedItem} {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} HTTP/1.1\r\n" +
                                                      "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: */*\r\n\r\n");
+
+                // TODO - implement HTTP methods into TCP message
 
                 socket.Send(buf);
 
