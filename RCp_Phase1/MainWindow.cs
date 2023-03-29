@@ -122,6 +122,9 @@ namespace RCp_Phase1
                 /* Processes any connection-specific error obtained
                  * during the try block above. */
                 rtbResults.Error("Error connecting to the given IP address: " + s.Message);
+
+                // Resets the IP address string to an empty one.
+                ipAddress = string.Empty;
             }
 
             /* Reenables all relevant controls to allow new
@@ -184,7 +187,6 @@ namespace RCp_Phase1
                         break;
                 }
             }
-
             catch (Exception ex)
             {
                 /* Processes any connection-specific error obtained
@@ -200,6 +202,9 @@ namespace RCp_Phase1
                 socket.Close(5000);
                 socket.Dispose();
                 socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
+                // Resets the IP address string to an empty one.
+                ipAddress = string.Empty;
             }
 
             /* Reenables all relevant controls to allow new
