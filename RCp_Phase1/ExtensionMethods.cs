@@ -19,7 +19,7 @@ namespace RCp_Phase1
     {
         /* Method responsible for appending a specific message with a
          * determined color for a multiline textbox. */
-        public static void AppendWithColor(this RichTextBox rtb, string message, Color color)
+        private static void AppendWithColor(this RichTextBox rtb, string message, Color color)
         {
             /* Gets the end position of the textbox's text, and zeroes
              * the text selection length. */
@@ -57,20 +57,18 @@ namespace RCp_Phase1
 
         /* Method responsible for retrieving the status code from a
          * buffer with the HTTP response from the remote host. */
-        public static short GetStatusCode(this byte[] buf)
-        {
-            string status = Encoding.ASCII.GetString(buf).Split(' ')[1];
-
-            return !status.StartsWith("HTTP") ? (short)-1 : short.Parse(status.Split(' ')[1]);
-        }
+        public static short GetStatusCode(this byte[] buf) =>
+            short.Parse(Encoding.ASCII.GetString(buf).Split(' ')[1]);
 
         /* Method responsible for retrieving the response content
          * from a buffer with the HTTP response from the remote
          * host. */
-        public static string GetResponse(this byte[] buf) => Encoding.ASCII.GetString(buf).Split("\r\n\r\n")[1];
+        public static string GetResponse(this byte[] buf) =>
+            Encoding.ASCII.GetString(buf).Split("\r\n\r\n")[1];
 
         public static string GetErrorMessage(this SocketException sockEx)
         {
+            // TODO - implement more messages
             switch (sockEx.SocketErrorCode)
             {
                 case SocketError.Success:
