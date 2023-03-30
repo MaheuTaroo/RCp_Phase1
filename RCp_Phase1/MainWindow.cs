@@ -92,22 +92,24 @@ namespace RCp_Phase1
                  * connection flag is not active. */
                 else
                 {
-                    /* Format the user-given IP address, obtaining a
-                     * "beautified" version; this is done by the
+                    /* Formats the user-given IP address, obtaining
+                     * a "beautified" version; this is done by the
                      * following manner: 
                      * - The IP address gets its spaces eliminated
                      * (any unfilled spaces in the textbox are filled
-                     * with the ' ' character)
-                     * - If a certain field's numerical value is equivalent
-                     * to the number 0, it gets replaced with 0; else,
-                     * any unnecessary '0' characters get removed from
-                     * the field
+                     * with an empty string), and is separated into
+                     * an array with its individual fields for further
+                     * processing
+                     * - If a certain field is empty, it is replaced
+                     * with "0"; else, the field is converted to an
+                     * integer and saved back to the string array
+                     * containing the address fields
                      * - The global string associated to the given IP
                      * address is appended with every field, separated
                      * with the character '.' */
                     string[] splits = mtbIP.Text.Replace(" ", string.Empty).Split('.');
                     for (int i = 0; i < splits.Length; i++)
-                        splits[i] = int.Parse(splits[i]) == 0 ? "0" : splits[i].Replace("0", string.Empty);
+                        splits[i] = splits[i] == string.Empty ? "0" : int.Parse(splits[i]).ToString();
                     ipAddress = splits[0] + '.' + splits[1] + '.' + splits[2] + '.' + splits[3];
 
                     /* Connects to the "beautified" IP address on port
