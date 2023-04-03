@@ -1,5 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RCp_Phase1
 {
@@ -169,7 +171,7 @@ namespace RCp_Phase1
                     case 200:
                         try
                         {
-                            rtbResults.Success($"Successfully obtained {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)}; saving results in Desktop");
+                            rtbResults.Success($"200: Successfully obtained {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)}; saving results in Desktop");
                             string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
                                           ipAddress + (rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text).Replace('/', '_') + ".html";
                             File.WriteAllText(path, buf.GetResponse());
@@ -181,6 +183,35 @@ namespace RCp_Phase1
                             rtbResults.Error("Could not write response to disk, please try again later");
                         }
                         break;
+
+                    case 201:
+                        rtbResults.Success($"201: Successfully created the provided resource at {ipAddress + (rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)}");
+                        break;
+
+                    case 202:
+                        rtbResults.Warn("202: The request has been accepted, and is being processed by an exterior server or by a batch processor. Try again later.");
+                        break;
+
+                    case 203:
+                        try
+                        {
+                            rtbResults.Success($"203: Successfully obtained {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} (from external host); saving results in Desktop");
+                            string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
+                                          ipAddress + (rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text).Replace('/', '_') + ".html";
+                            File.WriteAllText(path, JsonDocument.Parse(buf.GetResponse()).RootElement.GetProperty("response").GetRawText());
+                            rtbResults.Success($"Successfully saved response on {path}");
+
+                        }
+                        catch
+                        {
+                            rtbResults.Error("Could not write response to disk, please try again later");
+                        }
+                        break;
+
+                    case 204:
+                        rtbResults.Success("204: The server received the request; no response was provided");
+                        break;
+
                     default:
                         rtbResults.Warn($"Not yet implemented: code {buf.GetStatusCode()}");
                         string cod = Encoding.ASCII.GetString(buf);
