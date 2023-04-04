@@ -14,7 +14,13 @@ namespace RCp_Phase1
 
         /* String associated to the provided IP address, used on the
          * label positioned above the file request textbox. */
-        string ipAddress = string.Empty;
+        string ipAddress = string.Empty,
+
+        /* Strint that stores the file to request; it may be updated
+         * every time the request file location textbox's text changes,
+         * or when the request contains a 3xx status code (so the new
+         * location's file is fetched). */
+               reqFile = string.Empty;
 
         /* Flag associated to the selected request method, active when
          * the user chooses the POST or PUT requests. */
@@ -152,64 +158,150 @@ namespace RCp_Phase1
             try
             {
                 // TODO - comment this code section and implement HTTP methods into TCP message
-                rtbResults.AppendText($"Sending following request:\n{cmbReqMethod.SelectedItem} {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} HTTP/1.1\nHost: {ipAddress}\nConnection: Keep-Alive\nAccept: */*\n");
 
-                byte[] buf = Encoding.ASCII.GetBytes($"{cmbReqMethod.SelectedItem} {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} HTTP/1.1\r\n" +
+                /* Repeats the request made by the user to the
+                 * remote host, and stores it under a buffer
+                 * encoded using the ASCII code table. */
+                rtbResults.AppendText($"Sending following request:\n{cmbReqMethod.SelectedItem} {(rtbRequest.Text.StartsWith('/') ? reqFile : '/' + rtbRequest.Text)} HTTP/1.1\nHost: {ipAddress}\nConnection: Keep-Alive\nAccept: */*\n");
+                byte[] buf = Encoding.ASCII.GetBytes($"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
                                                      "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: */*\r\n\r\n");
 
+                /* Sends the buffered message through the socket
+                 * to the host it is connected to, and presents a
+                 * success message announcing so. */
                 socket.Send(buf);
-
                 rtbResults.Success("Request sent, awaiting server response");
 
+                /* Creates a new and clean buffer, waits for a
+                 * response from the server, stores the amount
+                 * of bytes read from it and informs the user 
+                 * of that amount, as well as the answer yielded
+                 * from the server. */
                 buf = new byte[1024 * 1024];
                 int bytesRead = socket.Receive(buf);
-
                 rtbResults.Message($"Server answer received: total of {bytesRead} bytes read");
-
                 switch (buf.GetStatusCode())
                 {
                     case 200:
                         try
                         {
-                            rtbResults.Success($"200: Successfully obtained {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)}; saving results in Desktop");
-                            string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
-                                          ipAddress + (rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text).Replace('/', '_') + ".html";
-                            File.WriteAllText(path, buf.GetResponse());
-                            rtbResults.Success($"Successfully saved response on {path}");
+                            /* Announces a successful response from the server; if
+                             * the request method was a GET, then it also announces
+                             * the attempt to write the response to disk. */
+                            rtbResults.Success($"200: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop" : string.Empty));
+                            
+                            /* This code block is executed if the request method 
+                             * was set to GET in the related combobox. */
+                            if (cmbReqMethod.SelectedIndex == 0)
+                            {
+                                /* Obtains the path to the user's desktop, writes the
+                                 * entire response from the server to an HTML file in
+                                 * said path, and announces the success of the
+                                 * operation. */
+                                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
+                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_') + ".html";
+                                File.WriteAllText(path, buf.GetResponse());
+                                rtbResults.Success($"Successfully saved response on {path}");
+                            }
 
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            rtbResults.Error("Could not write response to disk, please try again later");
+                            /* Announces the failure to save the server's response to
+                             * the disk, paired with the message associated to the
+                             * error. */
+                            rtbResults.Error($"Could not write response to disk: {ex.Message}\nPlease try again later");
                         }
                         break;
 
                     case 201:
-                        rtbResults.Success($"201: Successfully created the provided resource at {ipAddress + (rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)}");
+                        /* Announces the success of the operation that resulted
+                         * in this status code (most likely a POST or a PUT
+                         * operation). */
+                        rtbResults.Success($"201: Successfully created the provided resource at {ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}");
                         break;
 
                     case 202:
+                        /* Announces that the server received the request,
+                         * but cannot give the response right away given
+                         * that it is being processed by another server. */
                         rtbResults.Warn("202: The request has been accepted, and is being processed by an exterior server or by a batch processor. Try again later.");
                         break;
 
                     case 203:
                         try
                         {
-                            rtbResults.Success($"203: Successfully obtained {(rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text)} (from external host); saving results in Desktop");
-                            string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
-                                          ipAddress + (rtbRequest.Text.StartsWith('/') ? rtbRequest.Text : '/' + rtbRequest.Text).Replace('/', '_') + ".html";
-                            File.WriteAllText(path, JsonDocument.Parse(buf.GetResponse()).RootElement.GetProperty("response").GetRawText());
-                            rtbResults.Success($"Successfully saved response on {path}");
-
+                            /* Announces a successful response from an external
+                             * server; if the request method was a GET, then it
+                             * also announces the attempt to write the response
+                             * to disk. */
+                            rtbResults.Success($"203: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} (from external host)" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop" : string.Empty));
+                            
+                            
+                            if (cmbReqMethod.SelectedIndex == 0)
+                            {
+                                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
+                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_') + ".html";
+                                File.WriteAllText(path, JsonDocument.Parse(buf.GetResponse()).RootElement.GetProperty("response").GetRawText());
+                                rtbResults.Success($"Successfully saved response on {path}");
+                            }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            rtbResults.Error("Could not write response to disk, please try again later");
+                            /* Announces the failure to save the server's response to
+                             * the disk, paired with the message associated to the
+                             * error. */
+                            rtbResults.Error($"Could not write response to disk: {ex.Message}\nPlease try again later");
                         }
                         break;
 
                     case 204:
+                        /* Announces that the server received the request, but the
+                         * response contains no content appended to the headers. */
                         rtbResults.Success("204: The server received the request; no response was provided");
+                        break;
+                    
+                    case 301:
+                        rtbResults.Warn("301: The requested file was permanently moved to a new location. A new request will be issued shortly.");
+                        reqFile = buf.GetLocation();
+                        cmbReqMethod.SelectedIndex = 0;
+                        btnRequest.PerformClick();
+                        break;
+
+                    case 302:
+                        rtbResults.Warn("302: The requested file was temporarily moved to a new location. A new request will be issued shortly.");
+                        reqFile = buf.GetLocation();
+                        cmbReqMethod.SelectedIndex = 0;
+                        btnRequest.PerformClick();
+                        break;
+
+                    case 303:
+                        rtbResults.Warn("303: The server recommended an alternate location for this operation. A new request will be issued shortly.");
+                        reqFile = buf.GetLocation();
+                        int idx = cmbReqMethod.SelectedIndex;
+                        cmbReqMethod.SelectedIndex = 0;
+                        btnRequest.PerformClick();
+                        cmbReqMethod.SelectedIndex = idx;
+                        break;
+
+                    case 304:
+                        rtbResults.Warn("304: The current request yielded a response that contains an unaltered version of an older, similar request. No further action has been made.");
+                        break;
+
+                    case 305:
+                        rtbResults.Warn("305: The request can only be answered by the server if a proxy server is used to make a connection. Connect to a proxy server and try again later.");
+                        break;
+
+                    case 307:
+                        rtbResults.Warn("307: The server has sent a temporary redirection to a new location. A new request will be issued shortly.");
+                        reqFile = buf.GetLocation();
+                        btnRequest.PerformClick();
+                        break;
+
+                    case 308:
+                        rtbResults.Warn("308: The server has sent a permanent redirection to a new location. A new request will be issued shortly.");
+                        reqFile = buf.GetLocation();
+                        btnRequest.PerformClick();
                         break;
 
                     default:
@@ -253,5 +345,14 @@ namespace RCp_Phase1
          * combobox. */
         private void cmbReqMethod_SelectedIndexChanged(object sender, EventArgs e) =>
             sendingFiles = cmbReqMethod.SelectedIndex == 2 || cmbReqMethod.SelectedIndex == 3;
+
+        /* Method called everytime the request file textbox
+         * changes text; when it is executed, it updates the
+         * string associated to the file that needs to be
+         * requested. */
+        private void rtbRequest_TextChanged(object sender, EventArgs e)
+        {
+            reqFile = rtbRequest.Text;
+        }
     }
 }

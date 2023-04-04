@@ -121,6 +121,7 @@
             rtbRequest.Size = new Size(303, 104);
             rtbRequest.TabIndex = 0;
             rtbRequest.Text = "";
+            rtbRequest.TextChanged += rtbRequest_TextChanged;
             // 
             // tableLayoutPanel5
             // 

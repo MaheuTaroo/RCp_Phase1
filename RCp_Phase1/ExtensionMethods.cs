@@ -17,6 +17,7 @@ namespace RCp_Phase1
      * derived data type containing such methods. */
     public static class ExtensionMethods
     {
+
         /* Method responsible for appending a specific message with a
          * determined color for a multiline textbox. */
         private static void AppendWithColor(this RichTextBox rtb, string message, Color color)
@@ -60,11 +61,28 @@ namespace RCp_Phase1
         public static short GetStatusCode(this byte[] buf) =>
             short.Parse(Encoding.ASCII.GetString(buf).Split(' ')[1]);
 
+        /* Method responsible for retrieving the response headers
+         * from a buffer with the HTTP response from the remote
+         * host. */
+        public static string GetHeaders(this byte[] buf) =>
+            Encoding.ASCII.GetString(buf).Split("\r\n\r\n")[0];
+
         /* Method responsible for retrieving the response content
          * from a buffer with the HTTP response from the remote
          * host. */
         public static string GetResponse(this byte[] buf) =>
             Encoding.ASCII.GetString(buf).Split("\r\n\r\n")[1];
+
+        public static string GetLocation(this byte[] buf)
+        {
+            string tmp = buf.GetHeaders();
+            if (tmp.Contains("Location:"))
+            {
+                tmp = tmp.Substring(buf.GetHeaders().IndexOf("Location: ") + "Location: ".Length);
+                return tmp.Substring(0, tmp.IndexOf('\n'));
+            }
+            return string.Empty;
+        }
 
         public static string GetErrorMessage(this SocketException sockEx)
         {
