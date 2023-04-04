@@ -182,13 +182,19 @@ namespace RCp_Phase1
                 rtbResults.Message($"Server answer received: total of {bytesRead} bytes read");
                 switch (buf.GetStatusCode())
                 {
+                    /* The 2xx status codes represent a successful response
+                     * from the server, with the file's content appended to
+                     * its end. Depending of the selected HTTP method, the
+                     * client may store the provided response payload on the
+                     * user's desktop folder. */
+
                     case 200:
                         try
                         {
                             /* Announces a successful response from the server; if
                              * the request method was a GET, then it also announces
                              * the attempt to write the response to disk. */
-                            rtbResults.Success($"200: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop" : string.Empty));
+                            rtbResults.Success($"200: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop..." : '.'));
                             
                             /* This code block is executed if the request method 
                              * was set to GET in the related combobox. */
@@ -201,7 +207,7 @@ namespace RCp_Phase1
                                 string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
                                           ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_') + ".html";
                                 File.WriteAllText(path, buf.GetResponse());
-                                rtbResults.Success($"Successfully saved response on {path}");
+                                rtbResults.Success($"Successfully saved response on {path}.");
                             }
 
                         }
@@ -210,7 +216,7 @@ namespace RCp_Phase1
                             /* Announces the failure to save the server's response to
                              * the disk, paired with the message associated to the
                              * error. */
-                            rtbResults.Error($"Could not write response to disk: {ex.Message}\nPlease try again later");
+                            rtbResults.Error($"Could not write response to disk: {ex.Message}\nPlease try again later.");
                         }
                         break;
 
@@ -235,7 +241,7 @@ namespace RCp_Phase1
                              * server; if the request method was a GET, then it
                              * also announces the attempt to write the response
                              * to disk. */
-                            rtbResults.Success($"203: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} (from external host)" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop" : string.Empty));
+                            rtbResults.Success($"203: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} (from external host)" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop..." : '.'));
                             
                             
                             if (cmbReqMethod.SelectedIndex == 0)
@@ -258,26 +264,37 @@ namespace RCp_Phase1
                     case 204:
                         /* Announces that the server received the request, but the
                          * response contains no content appended to the headers. */
-                        rtbResults.Success("204: The server received the request; no response was provided");
+                        rtbResults.Success("204: The server received the request, but no payload was provided.");
                         break;
-                    
+
+
+                    /* The 3xx status codes represent a redirection that
+                     * needs to be handled by the client. Each of the codes
+                     * are handled by announcing their meaning as a warning,
+                     * followed by a request to the new location. In the
+                     * case that the server returned the codes 301, 302 or
+                     * 303, this client changes the HTTP method to acomodate
+                     * the status code; if the server returned status code
+                     * 303, the previous HTTP method is restored after the
+                     * file is fetched from the new location. */
+
                     case 301:
                         rtbResults.Warn("301: The requested file was permanently moved to a new location. A new request will be issued shortly.");
-                        reqFile = buf.GetLocation();
+                        reqFile = buf.GetHeader("Location");
                         cmbReqMethod.SelectedIndex = 0;
                         btnRequest.PerformClick();
                         break;
 
                     case 302:
                         rtbResults.Warn("302: The requested file was temporarily moved to a new location. A new request will be issued shortly.");
-                        reqFile = buf.GetLocation();
+                        reqFile = buf.GetHeader("Location");
                         cmbReqMethod.SelectedIndex = 0;
                         btnRequest.PerformClick();
                         break;
 
                     case 303:
                         rtbResults.Warn("303: The server recommended an alternate location for this operation. A new request will be issued shortly.");
-                        reqFile = buf.GetLocation();
+                        reqFile = buf.GetHeader("Location");
                         int idx = cmbReqMethod.SelectedIndex;
                         cmbReqMethod.SelectedIndex = 0;
                         btnRequest.PerformClick();
@@ -294,19 +311,93 @@ namespace RCp_Phase1
 
                     case 307:
                         rtbResults.Warn("307: The server has sent a temporary redirection to a new location. A new request will be issued shortly.");
-                        reqFile = buf.GetLocation();
+                        reqFile = buf.GetHeader("Location");
                         btnRequest.PerformClick();
                         break;
 
                     case 308:
                         rtbResults.Warn("308: The server has sent a permanent redirection to a new location. A new request will be issued shortly.");
-                        reqFile = buf.GetLocation();
+                        reqFile = buf.GetHeader("Location");
                         btnRequest.PerformClick();
                         break;
 
+                    /* The 4xx status codes represent an error made by
+                     * the client at request time; these are handled
+                     * by announcing their specific meaning as an error. */
+
+                    case 400:
+                        rtbResults.Error("400: The server could not understand the request. Please retry your request with different parameters.");
+                        break;
+
+                    case 401:
+                        rtbResults.Error("401: The server requests credentials to make a successful request.");
+                        break;
+
+                    case 402:
+                        rtbResults.Error("402: The server requests a successful transaction to fulfill this request.");
+                        break;
+
+                    case 403:
+                        rtbResults.Error("403: The requested file cannot be retrieved, as its access is forbidden.");
+                        break;
+
+                    case 404:
+                        rtbResults.Error("404: The requested file does not exist. This may be because the path is misspelled or the file is non-existent.");
+                        break;
+
+                    case 405:
+                        rtbResults.Error($"405: The server does not allow access to this file under the \"{cmbReqMethod.SelectedItem}\" method.");
+                        break;
+
+                    case 406:
+                        rtbResults.Error("406: The requested file did not comply with the \"Accept\" or \"Accept-Language\" header specifications.");
+                        break;
+
+                    case 407:
+                        rtbResults.Error($"407: The proxy autentication credentials are wrong or non-existent.\nCredentials required: \"{buf.GetHeader("Proxy-Authenticate")}\"");
+                        break;
+
+                    case 408:
+                        rtbResults.Error("408: The request reached the server outside its acceptable time period. The connection has been terminated by the host.");
+                        break;
+
+                    case 410:
+                        rtbResults.Error("410: The requested file is permanently unavailable.");
+                        break;
+
+                    case 413:
+                        rtbResults.Error("413: The contents of the request are too long for the server to process.");
+                        break;
+
+                    case 414:
+                        rtbResults.Error("414: The requested file's path is too long.");
+                        break;
+
+                    case 415:
+                        rtbResults.Error("415: The contents of the request are not in a media type accepted by the server.");
+                        break;
+
+                    case 418:
+                        rtbResults.Error("418: The server is a teapot! It cannot brew coffee!");
+                        break;
+
+                    case 451:
+                        rtbResults.Error("451: The requested file is not available under your location's legislation.");
+                        break;
+
+                    /* The 5xx status codes represent an error during
+                     * the processing of a valid request; when these
+                     * occur, the server announces what caused the
+                     * incomplete processing of the request. These
+                     * errors are handled by announcing their
+                     * specific meanings as an error. */
+
+                    case 500:
+                        rtbResults.Error("500: The server ran into an internal error and the request could not be complete.");
+                        break;
+
                     default:
-                        rtbResults.Warn($"Not yet implemented: code {buf.GetStatusCode()}");
-                        string cod = Encoding.ASCII.GetString(buf);
+                        rtbResults.Warn($"The server yielded the status code {buf.GetStatusCode()}; this application is not prepared to react to it.");
                         if (buf.GetStatusCode() == -1)
                             throw new Exception("server response is invalid (message contained no status code)");
                         break;

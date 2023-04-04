@@ -35,7 +35,7 @@ namespace RCp_Phase1
             rtb.SelectionColor = rtb.ForeColor;
         }
 
-        /* Method responsible for setting a complementar message 
+        /* Method responsible for setting a complementary message 
          * on the associated RichTextBox control. */
         public static void Message(this RichTextBox rtb, string message) => 
             rtb.AppendWithColor(message, Color.FromArgb(0xff, 0, 0x38, 0xff));
@@ -73,12 +73,12 @@ namespace RCp_Phase1
         public static string GetResponse(this byte[] buf) =>
             Encoding.ASCII.GetString(buf).Split("\r\n\r\n")[1];
 
-        public static string GetLocation(this byte[] buf)
+        public static string GetHeader(this byte[] buf, string header)
         {
             string tmp = buf.GetHeaders();
             if (tmp.Contains("Location:"))
             {
-                tmp = tmp.Substring(buf.GetHeaders().IndexOf("Location: ") + "Location: ".Length);
+                tmp = tmp.Substring(buf.GetHeaders().IndexOf(header + ": ") + (header + ": ").Length);
                 return tmp.Substring(0, tmp.IndexOf('\n'));
             }
             return string.Empty;
@@ -91,6 +91,9 @@ namespace RCp_Phase1
             {
                 case SocketError.Success:
                     return "Success";
+
+                case SocketError.TimedOut:
+                    return "Socket connection timed out";
 
                 default:
                     return "fuck";
