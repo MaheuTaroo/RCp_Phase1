@@ -13,6 +13,7 @@
 		<Using Remove="System.Net.Http"></Using>
 		<Using Remove="System.Threading"></Using>
 		<Using Remove="System.Threading.Tasks"></Using>
+		<PackageReference Include="FileSignatures" Version="4.4.0" />
 		<Using Include="System.Net.Sockets"></Using>
 		<Using Include="System.Text"></Using>
 		<Using Include="System.Text.Json"></Using>
