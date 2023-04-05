@@ -1,3 +1,5 @@
+using FileSignatures;
+
 namespace RCp_Phase1
 {
     /* Auto-generated class, containing some definitions for the graphical
@@ -157,9 +159,9 @@ namespace RCp_Phase1
                 /* Repeats the request made by the user to the
                  * remote host, and stores it under a buffer
                  * encoded using the ASCII code table. */
-                rtbResults.AppendText($"Sending following request:\n{cmbReqMethod.SelectedItem} {(rtbRequest.Text.StartsWith('/') ? reqFile : '/' + rtbRequest.Text)} HTTP/1.1\nHost: {ipAddress}\nConnection: Keep-Alive\nAccept: */*\n");
                 byte[] buf = Encoding.ASCII.GetBytes($"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
-                                                     "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: */*\r\n\r\n");
+                                                      "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html\r\n\r\n");
+                rtbResults.AppendText($"Sending following request:\n{Encoding.ASCII.GetString(buf).Replace("\r\n", "\n")}");
 
                 /* Sends the buffered message through the socket
                  * to the host it is connected to, and presents a
@@ -190,7 +192,7 @@ namespace RCp_Phase1
                              * the request method was a GET, then it also announces
                              * the attempt to write the response to disk. */
                             rtbResults.Success($"200: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop..." : '.'));
-                            
+
                             /* This code block is executed if the request method 
                              * was set to GET in the related combobox. */
                             if (cmbReqMethod.SelectedIndex == 0)
@@ -231,8 +233,8 @@ namespace RCp_Phase1
                              * also announces the attempt to write the response
                              * to disk. */
                             rtbResults.Success($"203: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} (from external host)" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop..." : '.'));
-                            
-                            
+
+
                             if (cmbReqMethod.SelectedIndex == 0)
                             {
                                 string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
@@ -415,30 +417,37 @@ namespace RCp_Phase1
                        * is not being handled by this code block. If that happens,
                        * the user is notified that the client is not prepared to
                        * handle it. */
-                    
+
                     default:
-                        rtbResults.Warn($"The server yielded the status code {buf.GetStatusCode()}; this application is not prepared to react to it.");  
+                        rtbResults.Warn($"The server yielded the status code {buf.GetStatusCode()}; this application is not prepared to react to it.");
                         break;
                 }
             }
             catch (Exception ex)
             {
-                /* Processes any connection-specific error obtained
-                 * during the try block above. */
-                rtbResults.Error("Impossible to perform any operations with the host: " + ex.Message);
+                if (ex is ApplicationException)
+                {
 
-                /* Disconnects the socket from the connection
-                 * without reusability, closes it with a 5
-                 * second grace period to send any extra
-                 * packets, disposes of it and creates a
-                 * fresh new copy for future connections. */
-                socket.Disconnect(false);
-                socket.Close(5000);
-                socket.Dispose();
-                socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                }
+                else
+                {
+                    /* Processes any connection-specific error obtained
+                    * during the try block above. */
+                    rtbResults.Error("Impossible to perform any operations with the host: " + ex.Message);
 
-                // Resets the IP address string to an empty one.
-                ipAddress = string.Empty;
+                    /* Disconnects the socket from the connection
+                     * without reusability, closes it with a 5
+                     * second grace period to send any extra
+                     * packets, disposes of it and creates a
+                     * fresh new copy for future connections. */
+                    socket.Disconnect(false);
+                    socket.Close(5000);
+                    socket.Dispose();
+                    socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
+                    // Resets the IP address string to an empty one.
+                    ipAddress = string.Empty;
+                }
             }
 
             /* Reenables all relevant controls to allow new
