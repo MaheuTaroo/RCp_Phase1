@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Net.Sockets;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RCp_Phase1
+﻿namespace RCp_Phase1
 {
     /* Class responsible for containing any extension
      * methods used in the project; an extension method

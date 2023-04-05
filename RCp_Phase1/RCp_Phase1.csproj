@@ -1,11 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net7.0-windows</TargetFramework>
+		<Nullable>disable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<ItemGroup>
+		<Using Remove="System.Collections.Generic"></Using>
+		<Using Remove="System.Linq"></Using>
+		<Using Remove="System.Net.Http"></Using>
+		<Using Remove="System.Threading"></Using>
+		<Using Remove="System.Threading.Tasks"></Using>
+		<Using Include="System.Net.Sockets"></Using>
+		<Using Include="System.Text"></Using>
+		<Using Include="System.Text.Json"></Using>
+	</ItemGroup>
 
 </Project>

@@ -1,8 +1,3 @@
-using System.Net.Sockets;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace RCp_Phase1
 {
     /* Auto-generated class, containing some definitions for the graphical
@@ -157,7 +152,7 @@ namespace RCp_Phase1
              * catch block. */
             try
             {
-                // TODO - comment this code section and implement HTTP methods into TCP message
+                // TODO - comment this code section
 
                 /* Repeats the request made by the user to the
                  * remote host, and stores it under a buffer
@@ -221,16 +216,10 @@ namespace RCp_Phase1
                         break;
 
                     case 201:
-                        /* Announces the success of the operation that resulted
-                         * in this status code (most likely a POST or a PUT
-                         * operation). */
                         rtbResults.Success($"201: Successfully created the provided resource at {ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}");
                         break;
 
                     case 202:
-                        /* Announces that the server received the request,
-                         * but cannot give the response right away given
-                         * that it is being processed by another server. */
                         rtbResults.Warn("202: The request has been accepted, and is being processed by an exterior server or by a batch processor. Try again later.");
                         break;
 
@@ -262,8 +251,6 @@ namespace RCp_Phase1
                         break;
 
                     case 204:
-                        /* Announces that the server received the request, but the
-                         * response contains no content appended to the headers. */
                         rtbResults.Success("204: The server received the request, but no payload was provided.");
                         break;
 
@@ -393,13 +380,44 @@ namespace RCp_Phase1
                      * specific meanings as an error. */
 
                     case 500:
-                        rtbResults.Error("500: The server ran into an internal error and the request could not be complete.");
+                        rtbResults.Error("500: The server ran into an internal error and the request could not be completed.");
                         break;
 
+                    case 501:
+                        rtbResults.Error("501: The requested feature has not been implemented by the server.");
+                        break;
+
+                    case 502:
+                        rtbResults.Error("502: The upstream server this server acts as a proxy/gateway on has sent an invalid response.");
+                        break;
+
+                    case 503:
+                        rtbResults.Error("503: The service you tried to reach is unavailable. Please try again later.");
+                        break;
+
+                    case 504:
+                        rtbResults.Error("504: The upstream server this server acts as a proxy/gateway on has not sent a response.");
+                        break;
+
+                    case 505:
+                        rtbResults.Error("505: The server does not accept the use of HTTP/1.1 requests.");
+                        break;
+
+                    case 507:
+                        rtbResults.Error("506: The server does not contain enough storage space to accommodate your request.");
+                        break;
+
+                    case 511:
+                        rtbResults.Error("511: To make a request to a server, you need to authenticate on the network you are currently connected to.");
+                        break;
+
+                    /* The default branch is executed if the returned status code
+                       * is not being handled by this code block. If that happens,
+                       * the user is notified that the client is not prepared to
+                       * handle it. */
+                    
                     default:
-                        rtbResults.Warn($"The server yielded the status code {buf.GetStatusCode()}; this application is not prepared to react to it.");
-                        if (buf.GetStatusCode() == -1)
-                            throw new Exception("server response is invalid (message contained no status code)");
+                        rtbResults.Warn($"The server yielded the status code {buf.GetStatusCode()}; this application is not prepared to react to it.");  
                         break;
                 }
             }
@@ -410,10 +428,10 @@ namespace RCp_Phase1
                 rtbResults.Error("Impossible to perform any operations with the host: " + ex.Message);
 
                 /* Disconnects the socket from the connection
-                    * without reusability, closes it with a 5
-                    * second grace period to send any extra
-                    * packets, disposes of it and creates a
-                    * fresh new copy for future connections. */
+                 * without reusability, closes it with a 5
+                 * second grace period to send any extra
+                 * packets, disposes of it and creates a
+                 * fresh new copy for future connections. */
                 socket.Disconnect(false);
                 socket.Close(5000);
                 socket.Dispose();
