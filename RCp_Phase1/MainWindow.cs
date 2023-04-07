@@ -156,17 +156,29 @@ namespace RCp_Phase1
             {
                 // TODO - comment this code section
 
-                /* Repeats the request made by the user to the
-                 * remote host, and stores it under a buffer
+                /* Stores the request under a buffer
                  * encoded using the ASCII code table. */
-                byte[] buf = Encoding.ASCII.GetBytes($"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
-                                                      "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0,9,text/json;q=0,1 \r\n\r\n");
-                rtbResults.AppendText("Sending request...");
+                string request = $"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
+                                  "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0,9,text/json;q=0,1\r\n";
+
+                if (sendingFiles)
+                {
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        FileFormatInspector ffi = new FileFormatInspector();
+                        StreamReader reader = new StreamReader(ofd.FileName);
+                        request += $"Content-Type: {ffi.DetermineFileFormat(reader.BaseStream).ToString()}\r\nContent-Length: {new FileInfo(ofd.FileName).Length}\r\n\r\n";
+                        request += reader.ReadToEnd() + "\r\n\r\n";
+                    }
+                }
+                else request += "\r\n";
+
+                rtbResults.AppendText("Sending request...\n");
 
                 /* Sends the buffered message through the socket
                  * to the host it is connected to, and presents a
                  * success message announcing so. */
-                socket.Send(buf);
+                socket.Send(Encoding.ASCII.GetBytes(request));
                 rtbResults.Success("Request sent, awaiting server response");
 
                 /* Creates a new and clean buffer, waits for a
@@ -174,7 +186,7 @@ namespace RCp_Phase1
                  * of bytes read from it and informs the user 
                  * of that amount, as well as the answer yielded
                  * from the server. */
-                buf = new byte[1024 * 1024];
+                byte[] buf = new byte[1024 * 1024];
                 int bytesRead = socket.Receive(buf);
                 rtbResults.Message($"Server answer received: total of {bytesRead} bytes read");
                 switch (buf.GetStatusCode())
@@ -420,9 +432,9 @@ namespace RCp_Phase1
                         break;
 
                     /* The default branch is executed if the returned status code
-                       * is not being handled by this code block. If that happens,
-                       * the user is notified that the client is not prepared to
-                       * handle it. */
+                     * is not being handled by this code block. If that happens,
+                     * the user is notified that the client is not prepared to
+                     * handle it. */
 
                     default:
                         rtbResults.Warn($"The server yielded the status code {buf.GetStatusCode()}; this application is not prepared to react to it.");

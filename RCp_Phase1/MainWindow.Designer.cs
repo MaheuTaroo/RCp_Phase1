@@ -43,6 +43,7 @@
             label1 = new Label();
             btnConnect = new Button();
             rtbResults = new RichTextBox();
+            ofd = new OpenFileDialog();
             tableLayoutPanel1.SuspendLayout();
             tableLayoutPanel2.SuspendLayout();
             tableLayoutPanel4.SuspendLayout();
@@ -292,5 +293,6 @@
         private TableLayoutPanel tableLayoutPanel6;
         private Label label2;
         private ComboBox cmbReqMethod;
+        private OpenFileDialog ofd;
     }
 }
