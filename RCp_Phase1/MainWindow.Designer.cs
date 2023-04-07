@@ -181,6 +181,7 @@
             // cmbReqMethod
             // 
             cmbReqMethod.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbReqMethod.Enabled = false;
             cmbReqMethod.FormattingEnabled = true;
             cmbReqMethod.Items.AddRange(new object[] { "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE" });
             cmbReqMethod.Location = new Point(3, 26);

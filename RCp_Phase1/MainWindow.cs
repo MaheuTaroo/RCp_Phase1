@@ -154,24 +154,24 @@ namespace RCp_Phase1
              * catch block. */
             try
             {
-                // TODO - comment this code section
+                // TODO - comment this code section and finish file submission
 
                 /* Stores the request under a buffer
                  * encoded using the ASCII code table. */
                 string request = $"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
-                                  "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0,9,text/json;q=0,1\r\n";
+                                  "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0.9,text/json;q=0.8,*/*;q=0.7\r\nAccept-Language: *\r\n\r\n";
 
-                if (sendingFiles)
+                /*if (sendingFiles)
                 {
                     if (ofd.ShowDialog() == DialogResult.OK)
                     {
                         FileFormatInspector ffi = new FileFormatInspector();
                         StreamReader reader = new StreamReader(ofd.FileName);
-                        request += $"Content-Type: {ffi.DetermineFileFormat(reader.BaseStream).ToString()}\r\nContent-Length: {new FileInfo(ofd.FileName).Length}\r\n\r\n";
+                        request += $"Content-Type: {ffi.DetermineFileFormat(reader.BaseStream)}\r\nContent-Length: {new FileInfo(ofd.FileName).Length}\r\n\r\n";
                         request += reader.ReadToEnd() + "\r\n\r\n";
                     }
                 }
-                else request += "\r\n";
+                else request += "\r\n";*/
 
                 rtbResults.AppendText("Sending request...\n");
 
