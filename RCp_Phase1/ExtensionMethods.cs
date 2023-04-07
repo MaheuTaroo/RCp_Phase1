@@ -64,10 +64,13 @@
         public static string GetResponse(this byte[] buf) =>
             Encoding.ASCII.GetString(buf).Split("\r\n\r\n")[1];
 
+        /* Method responsible for retrieving a specific header
+         * from a buffer with the HTTP response from the remote
+         * host. */
         public static string GetHeader(this byte[] buf, string header)
         {
             string tmp = buf.GetHeaders();
-            if (tmp.Contains("Location:"))
+            if (tmp.Contains(header))
             {
                 tmp = tmp.Substring(buf.GetHeaders().IndexOf(header + ": ") + (header + ": ").Length);
                 return tmp.Substring(0, tmp.IndexOf('\n'));
@@ -75,20 +78,38 @@
             return string.Empty;
         }
 
-        public static string GetErrorMessage(this SocketException sockEx)
-        {
-            // TODO - implement more messages
-            switch (sockEx.SocketErrorCode)
+        /* Method responsible for returning a custom error
+         * message associated to a specific socket error, such
+         * as a socket disconnection or connection error. */
+        public static string GetErrorMessage(this SocketException sockEx) => 
+            sockEx.SocketErrorCode switch
             {
-                case SocketError.Success:
-                    return "Success";
-
-                case SocketError.TimedOut:
-                    return "Socket connection timed out";
-
-                default:
-                    return "fuck";
-            }
-        }
+                SocketError.SocketError => "Unspecified socket error",
+                SocketError.Success => "Operation completed successfully",
+                SocketError.OperationAborted => "Operation aborted due to socket closure",
+                SocketError.TooManyOpenSockets => "Too many open connection sockets",
+                SocketError.MessageSize => "Request too long",
+                SocketError.OperationNotSupported => "Address family not supported by protocol family",
+                SocketError.AddressFamilyNotSupported => "Address family not supported by local machine",
+                SocketError.AddressAlreadyInUse => "Address already in use by another socket",
+                SocketError.AddressNotAvailable => "Invalid IP address",
+                SocketError.NetworkDown => "Network deactivated in local machine",
+                SocketError.NetworkUnreachable => "Network does not contain path to remote host",
+                SocketError.NetworkReset => "KeepAlive set on a timed out connection",
+                SocketError.ConnectionReset => "Connection reset by remote host",
+                SocketError.NoBufferSpaceAvailable => "No free buffer space for socket operation",
+                SocketError.IsConnected => "Socket already connected",
+                SocketError.NotConnected => "Socket not connected",
+                SocketError.Shutdown => "Operation cancelled due to closed socket",
+                SocketError.TimedOut => "Connection timed out, or host did not respond",
+                SocketError.ConnectionRefused => "Remote host actively refused connection",
+                SocketError.HostDown => "Host is down",
+                SocketError.HostUnreachable => "No network route to specified host",
+                SocketError.HostNotFound => "Unknown host",
+                SocketError.TryAgain => "Host could not be resolved, try again later",
+                SocketError.NoRecovery => "Unrecoverable error",
+                SocketError.NoData => "IP address not found on name server",
+                _ => $"Unimplemented socket error message; check https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socketerror?view=net-7.0 for error code {sockEx.SocketErrorCode}",
+            };
     }
 }

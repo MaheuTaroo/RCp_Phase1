@@ -160,8 +160,8 @@ namespace RCp_Phase1
                  * remote host, and stores it under a buffer
                  * encoded using the ASCII code table. */
                 byte[] buf = Encoding.ASCII.GetBytes($"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
-                                                      "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html\r\n\r\n");
-                rtbResults.AppendText($"Sending following request:\n{Encoding.ASCII.GetString(buf).Replace("\r\n", "\n")}");
+                                                      "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0,9,text/json;q=0,1 \r\n\r\n");
+                rtbResults.AppendText("Sending request...");
 
                 /* Sends the buffered message through the socket
                  * to the host it is connected to, and presents a
@@ -198,11 +198,14 @@ namespace RCp_Phase1
                             if (cmbReqMethod.SelectedIndex == 0)
                             {
                                 /* Obtains the path to the user's desktop, writes the
-                                 * entire response from the server to an HTML file in
-                                 * said path, and announces the success of the
+                                 * entire response from the server to an HTML or JSON 
+                                 * file in said path, and announces the success of the
                                  * operation. */
                                 string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
-                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_') + ".html";
+                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_');
+
+                                path += buf.GetHeader("Content-Type").Contains("text/html") ? ".html" : ".json";
+
                                 File.WriteAllText(path, buf.GetResponse());
                                 rtbResults.Success($"Successfully saved response on {path}.");
                             }
@@ -222,7 +225,7 @@ namespace RCp_Phase1
                         break;
 
                     case 202:
-                        rtbResults.Warn("202: The request has been accepted, and is being processed by an exterior server or by a batch processor. Try again later.");
+                        rtbResults.Warn("202: The request has been accepted, and is being processed by an external server or by a batch processor. Try again later.");
                         break;
 
                     case 203:
@@ -238,8 +241,11 @@ namespace RCp_Phase1
                             if (cmbReqMethod.SelectedIndex == 0)
                             {
                                 string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
-                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_') + ".html";
-                                File.WriteAllText(path, JsonDocument.Parse(buf.GetResponse()).RootElement.GetProperty("response").GetRawText());
+                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_');
+
+                                path += buf.GetHeader("Content-Type").Contains("text/html") ? ".html" : ".json";
+
+                                File.WriteAllText(path, buf.GetResponse());
                                 rtbResults.Success($"Successfully saved response on {path}");
                             }
                         }
@@ -425,15 +431,17 @@ namespace RCp_Phase1
             }
             catch (Exception ex)
             {
+                /* Discriminates between the possible exception
+                 * types, and reacts to them accordingly */
                 if (ex is ApplicationException)
                 {
 
                 }
                 else
                 {
-                    /* Processes any connection-specific error obtained
-                    * during the try block above. */
-                    rtbResults.Error("Impossible to perform any operations with the host: " + ex.Message);
+                    /* Processes any remaining errors obtained
+                     * during the try block above. */
+                    rtbResults.Error("Impossible to perform any operations with the host: " + (ex is SocketException ? ((SocketException)ex).GetErrorMessage() : ex.Message));
 
                     /* Disconnects the socket from the connection
                      * without reusability, closes it with a 5
