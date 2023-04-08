@@ -73,7 +73,7 @@
             if (tmp.Contains(header))
             {
                 tmp = tmp.Substring(buf.GetHeaders().IndexOf(header + ": ") + (header + ": ").Length);
-                return tmp.Substring(0, tmp.IndexOf('\n'));
+                return tmp.Contains("\r\n") ? tmp.Substring(0, tmp.IndexOf("\r\n")) : tmp;
             }
             return string.Empty;
         }
@@ -111,5 +111,25 @@
                 SocketError.NoData => "IP address not found on name server",
                 _ => $"Unimplemented socket error message; check https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socketerror?view=net-7.0 for error code {sockEx.SocketErrorCode}",
             };
+
+        /* Method responsible to check the connection
+         * status of a given socket; if it is not
+         * connected, the given socket instance created
+         * for the connection is disposed of, recreated
+         * and reconnected to the given previous remote 
+         * host. */
+        public static Socket CheckConnection(this Socket sock, string prevAddr)
+        {
+            if (!sock.Connected)
+            {
+                sock.Close(5000);
+                sock.Dispose();
+
+                sock = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                sock.Connect(prevAddr, 80);
+            }
+
+            return sock;
+        }
     }
 }

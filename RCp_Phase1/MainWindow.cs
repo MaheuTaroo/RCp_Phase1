@@ -21,7 +21,12 @@ namespace RCp_Phase1
 
         /* Flag associated to the selected request method, active when
          * the user chooses the POST or PUT requests. */
-        bool sendingFiles = false;
+        bool sendingFiles = false,
+
+        /* Flag created to suppress excessive messages in the results
+         * textbox. */
+             retry = false;
+
         public MainWindow()
         {
             /* Initialize and draw all window components;
@@ -156,12 +161,15 @@ namespace RCp_Phase1
             {
                 // TODO - comment this code section and finish file submission
 
-                /* Stores the request under a buffer
-                 * encoded using the ASCII code table. */
+                /* Prepares the request to be sent encoded using the ASCII code table.
+                 * */
                 string request = $"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
                                   "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0.9,text/json;q=0.8,*/*;q=0.7\r\nAccept-Language: *\r\n\r\n";
 
-                /*if (sendingFiles)
+                /* If the request method is either POST or PUT, ask the user
+                 * about the file they wish to send; else, finish the request
+                 with the */
+                if (sendingFiles)
                 {
                     if (ofd.ShowDialog() == DialogResult.OK)
                     {
@@ -170,16 +178,22 @@ namespace RCp_Phase1
                         request += $"Content-Type: {ffi.DetermineFileFormat(reader.BaseStream)}\r\nContent-Length: {new FileInfo(ofd.FileName).Length}\r\n\r\n";
                         request += reader.ReadToEnd() + "\r\n\r\n";
                     }
+                    /* If the user cancels the file submission, warn the user that 
+                     * said file was necessary and abort the request. */
+                    else
+                    {
+                        MessageBox.Show("You need to choose a file to send in order to use the POST or PUT methods.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
                 }
-                else request += "\r\n";*/
 
-                rtbResults.AppendText("Sending request...\n");
+                if (!retry) rtbResults.AppendText("Sending request...\n");
 
                 /* Sends the buffered message through the socket
                  * to the host it is connected to, and presents a
                  * success message announcing so. */
                 socket.Send(Encoding.ASCII.GetBytes(request));
-                rtbResults.Success("Request sent, awaiting server response");
+                if (!retry) rtbResults.Success("Request sent, awaiting server response");
 
                 /* Creates a new and clean buffer, waits for a
                  * response from the server, stores the amount
@@ -283,28 +297,59 @@ namespace RCp_Phase1
                      * 303, this client changes the HTTP method to acomodate
                      * the status code; if the server returned status code
                      * 303, the previous HTTP method is restored after the
-                     * file is fetched from the new location. */
+                     * file is fetched from the new location. 
+                     * In the cases specified above, the "Location" header 
+                     * result needs to be filtered; this is due to the fact
+                     * that said result comes with the format
+                     * "http://<host>/<intended page>". Since the intended
+                     * format is "/<intended page>", this filtering has to
+                     * be executed.
+                     */
 
                     case 301:
                         rtbResults.Warn("301: The requested file was permanently moved to a new location. A new request will be issued shortly.");
                         reqFile = buf.GetHeader("Location");
+
+                        if (reqFile.StartsWith("http://"))
+                        {
+                            string temp = reqFile.Replace("http://", string.Empty);
+                            reqFile = temp.Substring(temp.IndexOf("/"));
+                        }
+
                         cmbReqMethod.SelectedIndex = 0;
-                        btnRequest.PerformClick();
+                        socket = socket.CheckConnection(ipAddress);
+                        btnRequest_Click(sender, e);
                         break;
 
                     case 302:
                         rtbResults.Warn("302: The requested file was temporarily moved to a new location. A new request will be issued shortly.");
                         reqFile = buf.GetHeader("Location");
+
+                        if (reqFile.StartsWith("http://"))
+                        {
+                            string temp = reqFile.Replace("http://", string.Empty);
+                            reqFile = temp.Substring(temp.IndexOf("/"));
+                        }
+
                         cmbReqMethod.SelectedIndex = 0;
-                        btnRequest.PerformClick();
+                        socket = socket.CheckConnection(ipAddress);
+                        btnRequest_Click(sender, e);
                         break;
 
                     case 303:
                         rtbResults.Warn("303: The server recommended an alternate location for this operation. A new request will be issued shortly.");
                         reqFile = buf.GetHeader("Location");
                         int idx = cmbReqMethod.SelectedIndex;
+
+                        if (reqFile.StartsWith("http://"))
+                        {
+                            string temp = reqFile.Replace("http://", string.Empty);
+                            reqFile = temp.Substring(temp.IndexOf("/"));
+                        }
+
                         cmbReqMethod.SelectedIndex = 0;
-                        btnRequest.PerformClick();
+                        socket = socket.CheckConnection(ipAddress);
+                        btnRequest_Click(sender, e);
                         cmbReqMethod.SelectedIndex = idx;
                         break;
 
@@ -319,13 +364,29 @@ namespace RCp_Phase1
                     case 307:
                         rtbResults.Warn("307: The server has sent a temporary redirection to a new location. A new request will be issued shortly.");
                         reqFile = buf.GetHeader("Location");
-                        btnRequest.PerformClick();
+
+                        if (reqFile.StartsWith("http://"))
+                        {
+                            string temp = reqFile.Replace("http://", string.Empty);
+                            reqFile = temp.Substring(temp.IndexOf("/"));
+                        }
+
+                        socket = socket.CheckConnection(ipAddress);
+                        btnRequest_Click(sender, e);
                         break;
 
                     case 308:
                         rtbResults.Warn("308: The server has sent a permanent redirection to a new location. A new request will be issued shortly.");
                         reqFile = buf.GetHeader("Location");
-                        btnRequest.PerformClick();
+
+                        if (reqFile.StartsWith("http://"))
+                        {
+                            string temp = reqFile.Replace("http://", string.Empty);
+                            reqFile = temp.Substring(temp.IndexOf("/"));
+                        }
+
+                        socket = socket.CheckConnection(ipAddress);
+                        btnRequest_Click(sender, e);
                         break;
 
                     /* The 4xx status codes represent an error made by
@@ -443,32 +504,56 @@ namespace RCp_Phase1
             }
             catch (Exception ex)
             {
-                /* Discriminates between the possible exception
-                 * types, and reacts to them accordingly */
-                if (ex is ApplicationException)
-                {
+                string err;
 
+                /* Checks if the error came from the socket; if this condition
+                 * holds true and the error was a connection abortion, tries to
+                 * reconnect and resend the request. */
+                if (ex is SocketException)
+                {
+                    if ((ex as SocketException).SocketErrorCode == SocketError.ConnectionAborted)
+                    {
+                        socket = socket.CheckConnection(ipAddress);
+                        retry = true;
+                        btnRequest_Click(sender, e);
+                        return;
+                    }
+                    err = (ex as SocketException).GetErrorMessage();
                 }
                 else
-                {
-                    /* Processes any remaining errors obtained
-                     * during the try block above. */
-                    rtbResults.Error("Impossible to perform any operations with the host: " + (ex is SocketException ? ((SocketException)ex).GetErrorMessage() : ex.Message));
+                    err = ex.Message;
 
-                    /* Disconnects the socket from the connection
-                     * without reusability, closes it with a 5
-                     * second grace period to send any extra
-                     * packets, disposes of it and creates a
-                     * fresh new copy for future connections. */
-                    socket.Disconnect(false);
-                    socket.Close(5000);
-                    socket.Dispose();
-                    socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                /* Else, notifies the user about the obtained
+                 * error. */
+                rtbResults.Error("Impossible to perform any operations with the host: " + err);
 
-                    // Resets the IP address string to an empty one.
-                    ipAddress = string.Empty;
-                }
+                /* Disconnects the socket from the connection
+                 * without reusability, closes it with a 5
+                 * second grace period to send any extra
+                 * packets, disposes of it and creates a
+                 * fresh new copy for future connections. */
+                socket.Disconnect(false);
+                socket.Close(5000);
+                socket.Dispose();
+                socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
+                // Resets the IP address string to an empty one.
+                ipAddress = string.Empty;
+
+                /* Reenables all relevant controls and aborts
+                 * the operation. */
+                ReenableAll();
+                return;
             }
+
+            /* To avoid errors, checks if the connection
+             * socket is still connected. */
+            socket = socket.CheckConnection(ipAddress);
+
+            /* Disables the retry flag in case that it has
+             * been activated (for example, due to a timeout
+             * error) */
+            if (retry) retry = false;
 
             /* Reenables all relevant controls to allow new
              * user interactions. */
