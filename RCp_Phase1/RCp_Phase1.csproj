@@ -5,6 +5,11 @@
 		<Nullable>disable</Nullable>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<StartupObject>RCp_Phase1.Program</StartupObject>
+		<NoWin32Manifest>true</NoWin32Manifest>
+		<GenerateDocumentationFile>False</GenerateDocumentationFile>
+		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -13,10 +18,25 @@
 		<Using Remove="System.Net.Http"></Using>
 		<Using Remove="System.Threading"></Using>
 		<Using Remove="System.Threading.Tasks"></Using>
-		<PackageReference Include="FileSignatures" Version="4.4.0" />
+		<Content Include="icon.ico" />
 		<Using Include="System.Net.Sockets"></Using>
 		<Using Include="System.Text"></Using>
 		<Using Include="System.Text.Json"></Using>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Properties\Resources.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>Resources.resx</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="Properties\Resources.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

@@ -1,5 +1,3 @@
-using FileSignatures;
-
 namespace RCp_Phase1
 {
     /* Auto-generated class, containing some definitions for the graphical
@@ -19,13 +17,9 @@ namespace RCp_Phase1
          * location's file is fetched). */
                reqFile = string.Empty;
 
-        /* Flag associated to the selected request method, active when
-         * the user chooses the POST or PUT requests. */
-        bool sendingFiles = false,
-
         /* Flag created to suppress excessive messages in the results
          * textbox. */
-             retry = false;
+        bool retry = false;
 
         public MainWindow()
         {
@@ -33,9 +27,9 @@ namespace RCp_Phase1
              * auto-generated code on project creation. */
             InitializeComponent();
 
-            /* Forcing the HTTP request method combobox's
-             * default value to the GET method. */
-            cmbReqMethod.SelectedIndex = 0;
+            /* Sets the window icon to the icon stored in
+             * the application resources class. */
+            Icon = Properties.Resources.icon;
         }
 
         void DisableAll()
@@ -43,7 +37,7 @@ namespace RCp_Phase1
             /* Deactivates all textboxes, buttons and
              * combobox used to connect to a host and 
              * transmit information. */
-            btnConnect.Enabled = btnRequest.Enabled = mtbIP.Enabled = rtbRequest.Enabled = cmbReqMethod.Enabled = false;
+            btnConnect.Enabled = btnRequest.Enabled = mtbIP.Enabled = rtbRequest.Enabled = false;
         }
 
         void ReenableAll()
@@ -59,11 +53,7 @@ namespace RCp_Phase1
              * connection status. */
             btnConnect.Enabled = true;
             mtbIP.Enabled = !socket.Connected;
-            btnRequest.Enabled = rtbRequest.Enabled = cmbReqMethod.Enabled = socket.Connected;
-
-            /* Forcing the HTTP request method combobox's
-             * default value to the GET method. */
-            cmbReqMethod.SelectedIndex = 0;
+            btnRequest.Enabled = rtbRequest.Enabled = socket.Connected;
         }
 
         /* Method called every time the user wants to connect to
@@ -126,7 +116,7 @@ namespace RCp_Phase1
                      * 80, and informs the user that the connection was
                      * successfully established. */
                     socket.Connect(ipAddress, 80);
-                    rtbResults.Success("Socket successfully connected to host");
+                    rtbResults.Message("Socket successfully connected to host");
                 }
             }
             catch (SocketException s)
@@ -161,31 +151,10 @@ namespace RCp_Phase1
             {
                 // TODO - comment this code section and finish file submission
 
-                /* Prepares the request to be sent encoded using the ASCII code table.
-                 * */
-                string request = $"{cmbReqMethod.SelectedItem} {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
+                /* Prepares the request to be sent encoded using the ASCII
+                 * code table. */
+                string request = $"GET {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} HTTP/1.1\r\n" +
                                   "Host: localhost\r\nConnection: Keep-Alive\r\nAccept: text/html;q=0.9,text/json;q=0.8,*/*;q=0.7\r\nAccept-Language: *\r\n\r\n";
-
-                /* If the request method is either POST or PUT, ask the user
-                 * about the file they wish to send; else, finish the request
-                 with the */
-                if (sendingFiles)
-                {
-                    if (ofd.ShowDialog() == DialogResult.OK)
-                    {
-                        FileFormatInspector ffi = new FileFormatInspector();
-                        StreamReader reader = new StreamReader(ofd.FileName);
-                        request += $"Content-Type: {ffi.DetermineFileFormat(reader.BaseStream)}\r\nContent-Length: {new FileInfo(ofd.FileName).Length}\r\n\r\n";
-                        request += reader.ReadToEnd() + "\r\n\r\n";
-                    }
-                    /* If the user cancels the file submission, warn the user that 
-                     * said file was necessary and abort the request. */
-                    else
-                    {
-                        MessageBox.Show("You need to choose a file to send in order to use the POST or PUT methods.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                }
 
                 if (!retry) rtbResults.AppendText("Sending request...\n");
 
@@ -214,27 +183,22 @@ namespace RCp_Phase1
                     case 200:
                         try
                         {
-                            /* Announces a successful response from the server; if
-                             * the request method was a GET, then it also announces
-                             * the attempt to write the response to disk. */
-                            rtbResults.Success($"200: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop..." : '.'));
+                            /* Announces a successful response from the server,
+                             * and announces the attempt to write the response 
+                             * to disk. */
+                            rtbResults.Success($"200: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)}; saving results in Desktop...");
 
-                            /* This code block is executed if the request method 
-                             * was set to GET in the related combobox. */
-                            if (cmbReqMethod.SelectedIndex == 0)
-                            {
-                                /* Obtains the path to the user's desktop, writes the
-                                 * entire response from the server to an HTML or JSON 
-                                 * file in said path, and announces the success of the
-                                 * operation. */
-                                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
-                                          ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_');
+                            /* Obtains the path to the user's desktop, writes the
+                             * entire response from the server to an HTML or JSON 
+                             * file in said path, and announces the success of the
+                             * operation. */
+                            string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
+                                      ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_');
 
-                                path += buf.GetHeader("Content-Type").Contains("text/html") ? ".html" : ".json";
+                            path += buf.GetHeader("Content-Type").Contains("text/html") ? ".html" : ".json";
 
-                                File.WriteAllText(path, buf.GetResponse());
-                                rtbResults.Success($"Successfully saved response on {path}.");
-                            }
+                            File.WriteAllText(path, buf.GetResponse());
+                            rtbResults.Success($"Successfully saved response on {path}.");
 
                         }
                         catch (Exception ex)
@@ -258,22 +222,21 @@ namespace RCp_Phase1
                         try
                         {
                             /* Announces a successful response from an external
-                             * server; if the request method was a GET, then it
-                             * also announces the attempt to write the response
-                             * to disk. */
-                            rtbResults.Success($"203: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} (from external host)" + (cmbReqMethod.SelectedIndex == 0 ? "; saving results in Desktop..." : '.'));
+                             * server, and announces the attempt to write the
+                             * response to disk. */
+                            rtbResults.Success($"203: Successfully obtained {(reqFile.StartsWith('/') ? reqFile : '/' + reqFile)} (from external host); saving results in Desktop...");
 
-
-                            if (cmbReqMethod.SelectedIndex == 0)
-                            {
-                                string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
+                            /* Obtains the path to the user's desktop, writes the
+                             * entire response from the server to an HTML or JSON 
+                             * file in said path, and announces the success of the
+                             * operation. */
+                            string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + '\\' +
                                           ipAddress + (reqFile.StartsWith('/') ? reqFile : '/' + reqFile).Replace('/', '_');
 
-                                path += buf.GetHeader("Content-Type").Contains("text/html") ? ".html" : ".json";
+                            path += buf.GetHeader("Content-Type").Contains("text/html") ? ".html" : ".json";
 
-                                File.WriteAllText(path, buf.GetResponse());
-                                rtbResults.Success($"Successfully saved response on {path}");
-                            }
+                            File.WriteAllText(path, buf.GetResponse());
+                            rtbResults.Success($"Successfully saved response on {path}");
                         }
                         catch (Exception ex)
                         {
@@ -316,7 +279,6 @@ namespace RCp_Phase1
                             reqFile = temp.Substring(temp.IndexOf("/"));
                         }
 
-                        cmbReqMethod.SelectedIndex = 0;
                         socket = socket.CheckConnection(ipAddress);
                         btnRequest_Click(sender, e);
                         break;
@@ -331,7 +293,6 @@ namespace RCp_Phase1
                             reqFile = temp.Substring(temp.IndexOf("/"));
                         }
 
-                        cmbReqMethod.SelectedIndex = 0;
                         socket = socket.CheckConnection(ipAddress);
                         btnRequest_Click(sender, e);
                         break;
@@ -339,7 +300,6 @@ namespace RCp_Phase1
                     case 303:
                         rtbResults.Warn("303: The server recommended an alternate location for this operation. A new request will be issued shortly.");
                         reqFile = buf.GetHeader("Location");
-                        int idx = cmbReqMethod.SelectedIndex;
 
                         if (reqFile.StartsWith("http://"))
                         {
@@ -347,10 +307,8 @@ namespace RCp_Phase1
                             reqFile = temp.Substring(temp.IndexOf("/"));
                         }
 
-                        cmbReqMethod.SelectedIndex = 0;
                         socket = socket.CheckConnection(ipAddress);
                         btnRequest_Click(sender, e);
-                        cmbReqMethod.SelectedIndex = idx;
                         break;
 
                     case 304:
@@ -414,7 +372,7 @@ namespace RCp_Phase1
                         break;
 
                     case 405:
-                        rtbResults.Error($"405: The server does not allow access to this file under the \"{cmbReqMethod.SelectedItem}\" method.");
+                        rtbResults.Error($"405: The server does not allow access to this file under the \"GET\" method.");
                         break;
 
                     case 406:
@@ -560,22 +518,10 @@ namespace RCp_Phase1
             ReenableAll();
         }
 
-        /* Method called every time the HTTP request method
-         * combobox changes selection; when it is executed,
-         * it checks whether the selected item's index within
-         * the combobox's data source is the same as either the
-         * POST or PUT methods' selection index within the
-         * combobox. */
-        private void cmbReqMethod_SelectedIndexChanged(object sender, EventArgs e) =>
-            sendingFiles = cmbReqMethod.SelectedIndex == 2 || cmbReqMethod.SelectedIndex == 3;
-
         /* Method called everytime the request file textbox
          * changes text; when it is executed, it updates the
          * string associated to the file that needs to be
          * requested. */
-        private void rtbRequest_TextChanged(object sender, EventArgs e)
-        {
-            reqFile = rtbRequest.Text;
-        }
+        private void rtbRequest_TextChanged(object sender, EventArgs e) => reqFile = rtbRequest.Text;
     }
 }
